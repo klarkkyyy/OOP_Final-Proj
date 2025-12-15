@@ -7,8 +7,19 @@ public class Assassin extends Hero {
     }
     
     @Override
-    public String useSpecialAbility() {
-        return "Assassin uses 'Backstab' - critical hit with increased damage!";
+    public int useSpecialAbility() {
+        // Assassin's Backstab: Deals 2.5x attack damage (critical hit)
+        return (int)(attack * 2.5);
+    }
+    
+    public String getSpecialAbilityName() {
+        return "Backstab";
+    }
+    
+    @Override
+    public int redemption() {
+        // Assassin's Redemption: Ultimate one-shot attack
+        return 999;
     }
 }
 

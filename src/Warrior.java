@@ -7,8 +7,19 @@ public class Warrior extends Hero {
     }
     
     @Override
-    public String useSpecialAbility() {
-        return "Warrior uses 'Power Strike' - deals massive physical damage!";
+    public int useSpecialAbility() {
+        // Warrior's Power Strike: Deals 2x attack damage
+        return attack * 2;
+    }
+    
+    public String getSpecialAbilityName() {
+        return "Power Strike";
+    }
+    
+    @Override
+    public int redemption() {
+        // Warrior's Redemption: Ultimate one-shot attack
+        return 999;
     }
 }
 

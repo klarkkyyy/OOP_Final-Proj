@@ -7,8 +7,19 @@ public class Mage extends Hero {
     }
     
     @Override
-    public String useSpecialAbility() {
-        return "Mage casts 'Fireball' - deals magical damage to all enemies!";
+    public int useSpecialAbility() {
+        // Mage's Fireball: Deals 3x attack damage (magical)
+        return attack * 3;
+    }
+    
+    public String getSpecialAbilityName() {
+        return "Fireball";
+    }
+    
+    @Override
+    public int redemption() {
+        // Mage's Redemption: Ultimate one-shot attack
+        return 999;
     }
 }
 
