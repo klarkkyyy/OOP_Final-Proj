@@ -423,6 +423,7 @@ public class Main {
     private JTextArea battleLog;
     private JTextArea battleCodeInput;
     private JLabel battleFeedbackLabel;
+    private JTextArea battleInstructionsArea;
     private JLabel heroImageLabel;
     private JLabel heroNameLabel;
     private JLabel enemyImageLabel;
@@ -459,18 +460,18 @@ public class Main {
         battleLog.setBackground(new Color(255, 255, 240));
         
         // Instructions (will be updated based on battle phase)
-        JTextArea battleInstructions = new JTextArea();
-        battleInstructions.setName("battleInstructions");
-        battleInstructions.setFont(new Font("Courier", Font.PLAIN, 11));
-        battleInstructions.setEditable(false);
-        battleInstructions.setOpaque(false);
-        battleInstructions.setLineWrap(true);
-        battleInstructions.setWrapStyleWord(true);
-        battleInstructions.setBorder(BorderFactory.createCompoundBorder(
+        battleInstructionsArea = new JTextArea();
+        battleInstructionsArea.setName("battleInstructions");
+        battleInstructionsArea.setFont(new Font("Courier", Font.PLAIN, 11));
+        battleInstructionsArea.setEditable(false);
+        battleInstructionsArea.setOpaque(false);
+        battleInstructionsArea.setLineWrap(true);
+        battleInstructionsArea.setWrapStyleWord(true);
+        battleInstructionsArea.setBorder(BorderFactory.createCompoundBorder(
             BorderFactory.createLineBorder(Color.BLUE, 2),
             BorderFactory.createEmptyBorder(10, 10, 10, 10)));
         // Initialize with phase 0 instructions
-        updateBattleInstructions(battleInstructions);
+        updateBattleInstructions(battleInstructionsArea);
         
         // Code input
         battleCodeInput = new JTextArea(3, 40);
@@ -496,7 +497,11 @@ public class Main {
         
         JPanel centerPanel = new JPanel(new BorderLayout(20, 20));
         centerPanel.setOpaque(false);
-        centerPanel.add(battleInstructions, BorderLayout.CENTER);
+        JScrollPane instructionsScrollPane = new JScrollPane(battleInstructionsArea);
+        instructionsScrollPane.setBorder(null);
+        instructionsScrollPane.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED);
+        instructionsScrollPane.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
+        centerPanel.add(instructionsScrollPane, BorderLayout.CENTER);
         centerPanel.add(inputPanel, BorderLayout.SOUTH);
         
         battleFeedbackLabel = new JLabel(" ", JLabel.CENTER);
@@ -716,10 +721,7 @@ public class Main {
         battleLog.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
         battleLog.append("The battle begins! Use your special ability to fight!\n");
         // Update instructions for phase 0
-        JTextArea instructions = findBattleInstructions();
-        if (instructions != null) {
-            updateBattleInstructions(instructions);
-        }
+        updateBattleInstructions(battleInstructionsArea);
     }
     
     private String getAbilityName(Hero hero) {
@@ -805,28 +807,7 @@ public class Main {
     }
     
     private JTextArea findBattleInstructions() {
-        // Find the battle instructions component
-        Component[] components = mainPanel.getComponents();
-        for (Component comp : components) {
-            if (comp instanceof JPanel) {
-                JTextArea found = findTextAreaInPanel((JPanel)comp, "battleInstructions");
-                if (found != null) return found;
-            }
-        }
-        return null;
-    }
-    
-    private JTextArea findTextAreaInPanel(JPanel panel, String name) {
-        for (Component comp : panel.getComponents()) {
-            if (comp instanceof JTextArea && name.equals(((JTextArea)comp).getName())) {
-                return (JTextArea)comp;
-            }
-            if (comp instanceof JPanel) {
-                JTextArea found = findTextAreaInPanel((JPanel)comp, name);
-                if (found != null) return found;
-            }
-        }
-        return null;
+        return battleInstructionsArea;
     }
     
     private void updateBattleDisplay() {
@@ -1015,6 +996,12 @@ public class Main {
             if (selectedHero.getUpgradePoints() == 0) {
                 message += "\n\n🎉 All upgrade points used! You've learned ENCAPSULATION & ABSTRACTION!";
                 codeInput.setEditable(false);
+                // Navigate to completion screen after a delay
+                Timer timer = new Timer(2000, e -> {
+                    showCompletionScreen();
+                });
+                timer.setRepeats(false);
+                timer.start();
             }
         } else {
             feedbackLabel.setForeground(Color.RED);
@@ -1022,6 +1009,105 @@ public class Main {
         
         feedbackLabel.setText(message);
         codeInput.setText("");
+    }
+    
+    private void showCompletionScreen() {
+        // Remove completion screen if it already exists
+        Component[] components = mainPanel.getComponents();
+        for (int i = components.length - 1; i >= 0; i--) {
+            Component comp = components[i];
+            if (comp.getName() != null && comp.getName().equals("completion")) {
+                mainPanel.remove(i);
+                break;
+            }
+        }
+        
+        JPanel completionPanel = new JPanel(new BorderLayout()) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+                Graphics2D g2 = (Graphics2D) g;
+                g2.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+                GradientPaint gp = new GradientPaint(0, 0, new Color(234, 244, 255), 0, getHeight(), new Color(210, 228, 255));
+                g2.setPaint(gp);
+                g2.fillRect(0, 0, getWidth(), getHeight());
+            }
+        };
+        completionPanel.setBorder(BorderFactory.createEmptyBorder(40, 40, 40, 40));
+        completionPanel.setName("completion");
+        
+        // Title
+        JLabel titleLabel = new JLabel("🎉 CONGRATULATIONS! 🎉", JLabel.CENTER);
+        titleLabel.setFont(new Font("Arial", Font.BOLD, 30));
+        titleLabel.setForeground(new Color(30, 90, 170));
+        
+        JLabel subtitleLabel = new JLabel("You mastered the OOP RPG Adventure", JLabel.CENTER);
+        subtitleLabel.setFont(new Font("Arial", Font.PLAIN, 16));
+        subtitleLabel.setForeground(new Color(60, 90, 120));
+        
+        // Completion message
+        JTextArea completionText = new JTextArea();
+        completionText.setText("You've successfully completed the OOP RPG Adventure!\n\n" +
+                              "Throughout this journey, you've learned the Four Pillars of Object-Oriented Programming:\n\n" +
+                              "1. ABSTRACTION - You used methods without knowing their internal implementation\n" +
+                              "2. ENCAPSULATION - You accessed private data through public methods\n" +
+                              "3. INHERITANCE - You created objects of different classes that extend Hero\n" +
+                              "4. POLYMORPHISM - You saw how the same method call produced different results\n\n" +
+                              "Your hero: " + selectedHero.getName() + "\n" +
+                              selectedHero.getStats() + "\n\n" +
+                              "Thank you for playing! Keep coding and learning!");
+        completionText.setFont(new Font("Arial", Font.PLAIN, 16));
+        completionText.setEditable(false);
+        completionText.setOpaque(false);
+        completionText.setLineWrap(true);
+        completionText.setWrapStyleWord(true);
+        completionText.setAlignmentX(Component.CENTER_ALIGNMENT);
+        completionText.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
+        
+        JPanel cardPanel = new JPanel(new BorderLayout(10, 10));
+        cardPanel.setOpaque(false);
+        cardPanel.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(new Color(200, 215, 240), 2),
+            BorderFactory.createEmptyBorder(20, 20, 20, 20)
+        ));
+        
+        JSeparator separator = new JSeparator();
+        separator.setForeground(new Color(200, 215, 240));
+        
+        // Close button
+        JButton closeButton = new JButton("Close Game");
+        closeButton.setFont(new Font("Arial", Font.BOLD, 16));
+        closeButton.setPreferredSize(new Dimension(160, 42));
+        closeButton.setBackground(new Color(255, 189, 89));
+        closeButton.setForeground(new Color(40, 40, 40));
+        closeButton.setFocusPainted(false);
+        closeButton.setBorder(BorderFactory.createEmptyBorder(8, 16, 8, 16));
+        closeButton.addActionListener(e -> System.exit(0));
+        
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
+        buttonPanel.setOpaque(false);
+        buttonPanel.add(closeButton);
+        
+        JPanel centerPanel = new JPanel();
+        centerPanel.setLayout(new BoxLayout(centerPanel, BoxLayout.Y_AXIS));
+        centerPanel.setOpaque(false);
+        centerPanel.add(Box.createVerticalGlue());
+        cardPanel.add(subtitleLabel, BorderLayout.NORTH);
+        cardPanel.add(completionText, BorderLayout.CENTER);
+        cardPanel.add(separator, BorderLayout.SOUTH);
+        centerPanel.add(cardPanel);
+        centerPanel.add(Box.createVerticalStrut(20));
+        centerPanel.add(buttonPanel);
+        centerPanel.add(Box.createVerticalGlue());
+        
+        completionPanel.add(titleLabel, BorderLayout.NORTH);
+        completionPanel.add(centerPanel, BorderLayout.CENTER);
+        
+        mainPanel.add(completionPanel, "completion");
+        cardLayout.show(mainPanel, "completion");
+        
+        mainPanel.revalidate();
+        mainPanel.repaint();
     }
     
     public static void main(String[] args) {
