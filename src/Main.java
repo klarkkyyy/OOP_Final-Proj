@@ -1,5 +1,9 @@
+import javax.imageio.ImageIO;
 import javax.swing.*;
 import java.awt.*;
+import java.awt.image.BufferedImage;
+import java.io.File;
+import java.io.InputStream;
 import java.util.regex.Pattern;
 
 public class Main {
@@ -31,37 +35,40 @@ public class Main {
     
     private void createWelcomeScreen() {
         JPanel welcomePanel = new JPanel(new BorderLayout());
-        welcomePanel.setBorder(BorderFactory.createEmptyBorder(50, 50, 50, 50));
+        welcomePanel.setBorder(BorderFactory.createEmptyBorder(40, 40, 40, 40));
         welcomePanel.setBackground(new Color(240, 248, 255));
-        
-        // Welcome text
+
+        JLabel titleLabel = new JLabel("Welcome to the OOP RPG Adventure!", JLabel.CENTER);
+        titleLabel.setFont(new Font("Arial", Font.BOLD, 26));
+
         JTextArea welcomeText = new JTextArea();
-        welcomeText.setText("Welcome to the OOP RPG Adventure!\n\n" +
-                           "In this game, you'll learn the Four Pillars of Object-Oriented Programming:\n\n" +
-                           "1. ABSTRACTION - Hiding complex details, showing only what's needed\n" +
-                           "2. ENCAPSULATION - Bundling data and methods together\n" +
-                           "3. INHERITANCE - Creating new classes based on existing ones\n" +
-                           "4. POLYMORPHISM - Using objects of different types through a common interface\n\n" +
-                           "Get ready to code your way through this adventure!");
+        welcomeText.setText(
+                "In this game, you'll learn the Four Pillars of Object-Oriented Programming:\n\n" +
+                "1. ABSTRACTION  - Hiding complex details, showing only what's needed\n" +
+                "2. ENCAPSULATION - Bundling data and methods together\n" +
+                "3. INHERITANCE   - Creating new classes based on existing ones\n" +
+                "4. POLYMORPHISM  - Using objects of different types through a common interface\n\n" +
+                "Get ready to code your way through this adventure!"
+        );
         welcomeText.setFont(new Font("Arial", Font.PLAIN, 16));
         welcomeText.setEditable(false);
         welcomeText.setOpaque(false);
         welcomeText.setLineWrap(true);
         welcomeText.setWrapStyleWord(true);
-        
-        // Next button
+
         JButton nextButton = new JButton("Next →");
         nextButton.setFont(new Font("Arial", Font.BOLD, 14));
         nextButton.setPreferredSize(new Dimension(120, 40));
         nextButton.addActionListener(e -> cardLayout.show(mainPanel, "classSelection"));
-        
+
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         buttonPanel.setOpaque(false);
         buttonPanel.add(nextButton);
-        
-        welcomePanel.add(welcomeText, BorderLayout.CENTER);
+
+        welcomePanel.add(titleLabel, BorderLayout.NORTH);
+        welcomePanel.add(new JScrollPane(welcomeText), BorderLayout.CENTER);
         welcomePanel.add(buttonPanel, BorderLayout.SOUTH);
-        
+
         mainPanel.add(welcomePanel, "welcome");
     }
     
@@ -74,23 +81,28 @@ public class Main {
         JLabel titleLabel = new JLabel("Choose Your Hero Class", JLabel.CENTER);
         titleLabel.setFont(new Font("Arial", Font.BOLD, 24));
         
+        // Class icons
+        ImageIcon warriorIcon = loadClassIcon("warrior.jpg", "Warrior", new Color(200, 100, 100));
+        ImageIcon mageIcon = loadClassIcon("mage.jpg", "Mage", new Color(100, 100, 200));
+        ImageIcon assassinIcon = loadClassIcon("rogue.jpg", "Rogue", new Color(150, 100, 150));
+        
         // Class stats panel
         JPanel statsPanel = new JPanel(new GridLayout(1, 3, 20, 20));
         
         // Warrior stats
         JPanel warriorPanel = createClassPanel("Warrior", 
             "Health: 150\nAttack: 25\nMana: 10\n\nA brave fighter with high health\nand strong physical attacks",
-            new Color(200, 100, 100));
+            new Color(200, 100, 100), warriorIcon);
         
         // Mage stats
         JPanel magePanel = createClassPanel("Mage",
             "Health: 80\nAttack: 15\nMana: 50\n\nA powerful spellcaster with\nhigh mana and magical attacks",
-            new Color(100, 100, 200));
+            new Color(100, 100, 200), mageIcon);
         
         // Assassin stats
         JPanel assassinPanel = createClassPanel("Assassin",
             "Health: 100\nAttack: 30\nMana: 20\n\nA stealthy fighter with high\nattack and balanced stats",
-            new Color(150, 100, 150));
+            new Color(150, 100, 150), assassinIcon);
         
         statsPanel.add(warriorPanel);
         statsPanel.add(magePanel);
@@ -144,7 +156,13 @@ public class Main {
         JPanel centerPanel = new JPanel(new BorderLayout(20, 20));
         centerPanel.setOpaque(false);
         centerPanel.add(statsPanel, BorderLayout.NORTH);
-        centerPanel.add(instructionArea, BorderLayout.CENTER);
+
+        JScrollPane instructionScrollPane = new JScrollPane(instructionArea);
+        instructionScrollPane.setBorder(null);
+        instructionScrollPane.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED);
+        instructionScrollPane.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
+        centerPanel.add(instructionScrollPane, BorderLayout.CENTER);
+
         centerPanel.add(inputPanel, BorderLayout.SOUTH);
         
         selectionPanel.add(titleLabel, BorderLayout.NORTH);
@@ -154,26 +172,210 @@ public class Main {
         mainPanel.add(selectionPanel, "classSelection");
     }
     
-    private JPanel createClassPanel(String className, String stats, Color bgColor) {
+    private JPanel createClassPanel(String className, String stats, Color bgColor, ImageIcon icon) {
         JPanel panel = new JPanel(new BorderLayout());
         panel.setBorder(BorderFactory.createCompoundBorder(
             BorderFactory.createLineBorder(Color.BLACK, 2),
             BorderFactory.createEmptyBorder(15, 15, 15, 15)));
         panel.setBackground(bgColor);
-        
+
         JLabel nameLabel = new JLabel(className, JLabel.CENTER);
         nameLabel.setFont(new Font("Arial", Font.BOLD, 18));
-        
-        JTextArea statsArea = new JTextArea(stats);
-        statsArea.setFont(new Font("Arial", Font.PLAIN, 12));
-        statsArea.setEditable(false);
-        statsArea.setOpaque(false);
-        statsArea.setAlignmentX(JTextArea.CENTER_ALIGNMENT);
-        
+
+        JPanel centerPanel = new JPanel(new BorderLayout());
+        centerPanel.setOpaque(false);
+
+        if (icon != null) {
+            JLabel imageLabel = new JLabel(icon);
+            imageLabel.setHorizontalAlignment(JLabel.CENTER);
+            centerPanel.add(imageLabel, BorderLayout.NORTH);
+        }
+
+        // Split stats into first 3 lines (HP, ATK, Mana) and the rest as description
+        String[] lines = stats.split("\\n");
+        String healthText = lines.length > 0 ? lines[0] : "";
+        String attackText = lines.length > 1 ? lines[1] : "";
+        String manaText   = lines.length > 2 ? lines[2] : "";
+
+        StringBuilder descBuilder = new StringBuilder();
+        for (int i = 3; i < lines.length; i++) {
+            if (descBuilder.length() > 0) descBuilder.append("\n");
+            descBuilder.append(lines[i]);
+        }
+        String descText = descBuilder.toString();
+
+        Color statColor = getStatsColorForClass(className);
+
+        JPanel statsPanel = new JPanel();
+        statsPanel.setOpaque(false);
+        statsPanel.setLayout(new BoxLayout(statsPanel, BoxLayout.Y_AXIS));
+        statsPanel.add(createStatRow(createSymbolIcon("♥", new Color(220, 20, 60)), healthText, statColor));
+        statsPanel.add(createStatRow(createSymbolIcon("⚔", new Color(60, 60, 60)), attackText, statColor));
+        statsPanel.add(createStatRow(createSymbolIcon("★", new Color(65, 105, 225)), manaText, statColor));
+
+        JTextArea descArea = new JTextArea(descText);
+        descArea.setFont(new Font("Arial", Font.PLAIN, 12));
+        descArea.setEditable(false);
+        descArea.setOpaque(false);
+        descArea.setLineWrap(true);
+        descArea.setWrapStyleWord(true);
+        descArea.setForeground(statColor);
+        descArea.setBorder(BorderFactory.createEmptyBorder(8, 0, 0, 0));
+
+        JPanel statsAndDesc = new JPanel();
+        statsAndDesc.setOpaque(false);
+        statsAndDesc.setLayout(new BoxLayout(statsAndDesc, BoxLayout.Y_AXIS));
+        statsAndDesc.add(statsPanel);
+        statsAndDesc.add(descArea);
+
+        centerPanel.add(statsAndDesc, BorderLayout.CENTER);
+
         panel.add(nameLabel, BorderLayout.NORTH);
-        panel.add(statsArea, BorderLayout.CENTER);
-        
+        panel.add(centerPanel, BorderLayout.CENTER);
+
         return panel;
+    }
+
+    private JPanel createStatRow(ImageIcon icon, String text, Color textColor) {
+        JPanel row = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
+        row.setOpaque(false);
+
+        JLabel iconLabel = new JLabel(icon);
+        JLabel textLabel = new JLabel(text);
+        textLabel.setFont(new Font("Arial", Font.PLAIN, 12));
+        textLabel.setForeground(textColor);
+
+        row.add(iconLabel);
+        row.add(textLabel);
+        return row;
+    }
+
+    private ImageIcon createSymbolIcon(String symbol, Color baseColor) {
+        int size = 18;
+        BufferedImage image = new BufferedImage(size, size, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g2 = image.createGraphics();
+        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        g2.setColor(baseColor.darker());
+        g2.fillOval(0, 0, size, size);
+        g2.setColor(baseColor);
+        g2.fillOval(2, 2, size - 4, size - 4);
+        g2.setFont(new Font("Segoe UI", Font.BOLD, 11));
+        FontMetrics fm = g2.getFontMetrics();
+        int x = (size - fm.stringWidth(symbol)) / 2;
+        int y = (size - fm.getHeight()) / 2 + fm.getAscent();
+        g2.setColor(Color.WHITE);
+        g2.drawString(symbol, x, y);
+        g2.dispose();
+        return new ImageIcon(image);
+    }
+
+    private Color getStatsColorForClass(String className) {
+        if ("Warrior".equalsIgnoreCase(className)) {
+            return new Color(255, 240, 220); // warm, fits warrior panel
+        } else if ("Mage".equalsIgnoreCase(className)) {
+            return new Color(225, 235, 255); // cool, fits mage panel
+        } else if ("Assassin".equalsIgnoreCase(className)) {
+            return new Color(245, 225, 255); // subtle purple tint
+        }
+        return Color.WHITE;
+    }
+
+    private ImageIcon loadClassIcon(String fileName, String label, Color fallbackColor) {
+        int size = 160;
+        // Try classpath
+        try (InputStream stream = getClass().getResourceAsStream("/" + fileName)) {
+            if (stream != null) {
+                BufferedImage img = ImageIO.read(stream);
+                if (img != null) {
+                    Image scaled = img.getScaledInstance(size, size, Image.SCALE_SMOOTH);
+                    return new ImageIcon(scaled);
+                }
+            }
+        } catch (Exception ignored) {}
+        // Try working directory
+        try {
+            File file = new File(fileName);
+            if (file.exists()) {
+                BufferedImage img = ImageIO.read(file);
+                if (img != null) {
+                    Image scaled = img.getScaledInstance(size, size, Image.SCALE_SMOOTH);
+                    return new ImageIcon(scaled);
+                }
+            }
+        } catch (Exception ignored) {}
+        // Fallback placeholder
+        return new ImageIcon(createPlaceholderImage(label, fallbackColor, size));
+    }
+
+    private Image createPlaceholderImage(String label, Color baseColor, int size) {
+        BufferedImage image = new BufferedImage(size, size, BufferedImage.TYPE_INT_RGB);
+        Graphics2D g2 = image.createGraphics();
+        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        g2.setColor(baseColor.darker());
+        g2.fillRoundRect(0, 0, size, size, 24, 24);
+        g2.setColor(baseColor);
+        g2.fillRoundRect(6, 6, size - 12, size - 12, 18, 18);
+        g2.setFont(new Font("Segoe UI", Font.BOLD, 22));
+        FontMetrics fm = g2.getFontMetrics();
+        int x = (size - fm.stringWidth(label)) / 2;
+        int y = (size - fm.getHeight()) / 2 + fm.getAscent();
+        g2.setColor(Color.WHITE);
+        g2.drawString(label, x, y);
+        g2.dispose();
+        return image;
+    }
+
+    private JPanel createBattleVisualPanel() {
+        JPanel wrapper = new JPanel(new BorderLayout());
+        wrapper.setOpaque(false);
+
+        JPanel row = new JPanel(new GridLayout(1, 3, 20, 0));
+        row.setOpaque(false);
+
+        // Hero side
+        heroImageLabel = new JLabel(getHeroBattleIcon());
+        heroImageLabel.setHorizontalAlignment(JLabel.CENTER);
+        heroNameLabel = new JLabel(selectedHero.getName(), JLabel.CENTER);
+        heroNameLabel.setFont(new Font("Arial", Font.BOLD, 16));
+
+        JPanel heroPanel = new JPanel(new BorderLayout());
+        heroPanel.setOpaque(false);
+        heroPanel.add(heroImageLabel, BorderLayout.CENTER);
+        heroPanel.add(heroNameLabel, BorderLayout.SOUTH);
+
+        // VS label
+        JLabel vsLabel = new JLabel("VS", JLabel.CENTER);
+        vsLabel.setFont(new Font("Arial", Font.BOLD, 20));
+        vsLabel.setForeground(Color.DARK_GRAY);
+
+        // Enemy side
+        enemyImageLabel = new JLabel(loadClassIcon("goblin.jpg", "Goblin", new Color(85, 107, 47)));
+        enemyImageLabel.setHorizontalAlignment(JLabel.CENTER);
+        JLabel enemyNameLabel = new JLabel(currentEnemy.getName(), JLabel.CENTER);
+        enemyNameLabel.setFont(new Font("Arial", Font.BOLD, 16));
+
+        JPanel enemyPanel = new JPanel(new BorderLayout());
+        enemyPanel.setOpaque(false);
+        enemyPanel.add(enemyImageLabel, BorderLayout.CENTER);
+        enemyPanel.add(enemyNameLabel, BorderLayout.SOUTH);
+
+        row.add(heroPanel);
+        row.add(vsLabel);
+        row.add(enemyPanel);
+
+        wrapper.add(row, BorderLayout.CENTER);
+        return wrapper;
+    }
+
+    private ImageIcon getHeroBattleIcon() {
+        if (selectedHero instanceof Warrior) {
+            return loadClassIcon("warrior.jpg", "Warrior", new Color(200, 100, 100));
+        } else if (selectedHero instanceof Mage) {
+            return loadClassIcon("mage.jpg", "Mage", new Color(100, 100, 200));
+        } else if (selectedHero instanceof Assassin) {
+            return loadClassIcon("rogue.jpg", "Assassin", new Color(150, 100, 150));
+        }
+        return loadClassIcon("hero.jpg", "Hero", new Color(120, 120, 120));
     }
     
     private void validateCode() {
@@ -221,6 +423,9 @@ public class Main {
     private JTextArea battleLog;
     private JTextArea battleCodeInput;
     private JLabel battleFeedbackLabel;
+    private JLabel heroImageLabel;
+    private JLabel heroNameLabel;
+    private JLabel enemyImageLabel;
     private int battlePhase = 0; // 0=initial, 1=after first one-shot, 2=after class switch (can use ability), 3=redemption phase
     private int classesUsed = 1; // Track how many classes have been used
     
@@ -305,6 +510,7 @@ public class Main {
         
         JPanel mainBattleLayout = new JPanel(new BorderLayout(20, 20));
         mainBattleLayout.setOpaque(false);
+        mainBattleLayout.add(createBattleVisualPanel(), BorderLayout.NORTH);
         mainBattleLayout.add(centerPanel, BorderLayout.CENTER);
         mainBattleLayout.add(rightPanel, BorderLayout.EAST);
         
@@ -393,6 +599,10 @@ public class Main {
             battleLog.append("💀 " + selectedHero.getName() + " takes " + enemyDamage + " damage and is defeated again!\n");
             battleLog.append("⚠️ The hero must switch classes once more!\n\n");
             updateBattleInstructions(findBattleInstructions());
+            // Hide hero image when defeated
+            if (heroImageLabel != null) {
+                heroImageLabel.setVisible(false);
+            }
             
             battleCodeInput.setText("");
             
@@ -428,6 +638,10 @@ public class Main {
                         battleLog.append("🔄 Emergency class switch ability activated!\n\n");
                         battlePhase = 1; // Move to scripted sequence
                         updateBattleInstructions(findBattleInstructions());
+                        // Hide hero image when defeated
+                        if (heroImageLabel != null) {
+                            heroImageLabel.setVisible(false);
+                        }
                     }
                 }
                 
@@ -532,7 +746,7 @@ public class Main {
         // Reset hero to full health for the new class
         selectedHero.currentHealth = selectedHero.maxHealth;
         
-        // Visual display removed - no update needed
+        // Show hero image again when switching to new class
         updateBattleDisplay();
     }
     
@@ -616,7 +830,16 @@ public class Main {
     }
     
     private void updateBattleDisplay() {
-        // Health bars removed - no update needed
+        // Update hero battlefield portrait when class changes
+        if (heroImageLabel != null) {
+            heroImageLabel.setIcon(getHeroBattleIcon());
+            // Show hero image if hero is alive, hide if defeated
+            heroImageLabel.setVisible(!selectedHero.isDefeated());
+        }
+        // Update hero name label when class changes
+        if (heroNameLabel != null) {
+            heroNameLabel.setText(selectedHero.getName());
+        }
     }
     
     private void createUpgradeShop() {
@@ -680,11 +903,29 @@ public class Main {
         upgradeButton.setPreferredSize(new Dimension(150, 40));
         upgradeButton.addActionListener(e -> validateUpgradeCode(upgradeCodeInput, statsArea, upgradeFeedbackLabel, instructions));
         
+        // Hero image
+        ImageIcon heroIcon = getHeroBattleIcon();
+        JLabel heroImageLabel = new JLabel(heroIcon);
+        heroImageLabel.setHorizontalAlignment(JLabel.CENTER);
+        JLabel heroNameLabel = new JLabel(selectedHero.getName(), JLabel.CENTER);
+        heroNameLabel.setFont(new Font("Arial", Font.BOLD, 18));
+        heroNameLabel.setForeground(new Color(0, 100, 200));
+        
+        JPanel heroImagePanel = new JPanel(new BorderLayout());
+        heroImagePanel.setOpaque(false);
+        heroImagePanel.add(heroImageLabel, BorderLayout.CENTER);
+        heroImagePanel.add(heroNameLabel, BorderLayout.SOUTH);
+        
         // Layout
-        JPanel leftPanel = new JPanel(new BorderLayout(20, 20));
+        JPanel leftPanel = new JPanel(new BorderLayout(10, 10));
         leftPanel.setOpaque(false);
-        leftPanel.add(new JLabel("Hero Stats:", JLabel.CENTER), BorderLayout.NORTH);
-        leftPanel.add(new JScrollPane(statsArea), BorderLayout.CENTER);
+        leftPanel.add(heroImagePanel, BorderLayout.NORTH);
+        
+        JPanel statsSection = new JPanel(new BorderLayout(5, 5));
+        statsSection.setOpaque(false);
+        statsSection.add(new JLabel("Hero Stats:", JLabel.CENTER), BorderLayout.NORTH);
+        statsSection.add(new JScrollPane(statsArea), BorderLayout.CENTER);
+        leftPanel.add(statsSection, BorderLayout.CENTER);
         
         JPanel rightPanel = new JPanel(new BorderLayout(20, 20));
         rightPanel.setOpaque(false);
