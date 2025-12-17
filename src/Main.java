@@ -20,10 +20,9 @@ public class Main {
         cardLayout = new CardLayout();
         mainPanel = new JPanel(cardLayout);
         
-        // Create different screens
+
         createWelcomeScreen();
         createClassSelectionScreen();
-        // Battle screen will be created when needed
         
         frame.add(mainPanel, BorderLayout.CENTER);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -82,9 +81,9 @@ public class Main {
         titleLabel.setFont(new Font("Arial", Font.BOLD, 24));
         
         // Class icons
-        ImageIcon warriorIcon = loadClassIcon("warrior.jpg", "Warrior", new Color(200, 100, 100));
-        ImageIcon mageIcon = loadClassIcon("mage.jpg", "Mage", new Color(100, 100, 200));
-        ImageIcon assassinIcon = loadClassIcon("rogue.jpg", "Rogue", new Color(150, 100, 150));
+        ImageIcon warriorIcon = loadClassIcon("warrior.png", "Warrior", new Color(200, 100, 100));
+        ImageIcon mageIcon = loadClassIcon("mage.png", "Mage", new Color(100, 100, 200));
+        ImageIcon assassinIcon = loadClassIcon("rogue.png", "Rogue", new Color(150, 100, 150));
         
         // Class stats panel
         JPanel statsPanel = new JPanel(new GridLayout(1, 3, 20, 20));
@@ -349,7 +348,7 @@ public class Main {
         vsLabel.setForeground(Color.DARK_GRAY);
 
         // Enemy side
-        enemyImageLabel = new JLabel(loadClassIcon("goblin.jpg", "Goblin", new Color(85, 107, 47)));
+        enemyImageLabel = new JLabel(loadClassIcon("goblin.png", "Goblin", new Color(85, 107, 47)));
         enemyImageLabel.setHorizontalAlignment(JLabel.CENTER);
         JLabel enemyNameLabel = new JLabel(currentEnemy.getName(), JLabel.CENTER);
         enemyNameLabel.setFont(new Font("Arial", Font.BOLD, 16));
@@ -369,11 +368,11 @@ public class Main {
 
     private ImageIcon getHeroBattleIcon() {
         if (selectedHero instanceof Warrior) {
-            return loadClassIcon("warrior.jpg", "Warrior", new Color(200, 100, 100));
+            return loadClassIcon("warrior.png", "Warrior", new Color(200, 100, 100));
         } else if (selectedHero instanceof Mage) {
-            return loadClassIcon("mage.jpg", "Mage", new Color(100, 100, 200));
+            return loadClassIcon("mage.png", "Mage", new Color(100, 100, 200));
         } else if (selectedHero instanceof Assassin) {
-            return loadClassIcon("rogue.jpg", "Assassin", new Color(150, 100, 150));
+            return loadClassIcon("rogue.png", "Assassin", new Color(150, 100, 150));
         }
         return loadClassIcon("hero.jpg", "Hero", new Color(120, 120, 120));
     }
@@ -427,8 +426,12 @@ public class Main {
     private JLabel heroImageLabel;
     private JLabel heroNameLabel;
     private JLabel enemyImageLabel;
+    private JButton nextButton; // Button to proceed to upgrade shop after victory
+    private JPanel battleInputPanel; // Input panel to hide/show after victory
     private int battlePhase = 0; // 0=initial, 1=after first one-shot, 2=after class switch (can use ability), 3=redemption phase
     private int classesUsed = 1; // Track how many classes have been used
+    private String originalClass; // Track the original class selected
+    private java.util.Set<String> usedClasses = new java.util.HashSet<>(); // Track which classes have been used
     
     private void initializeBattle() {
         // Remove battle panel if it already exists
@@ -452,9 +455,19 @@ public class Main {
         // Reset battle phase
         battlePhase = 0;
         classesUsed = 1;
+        // Track original class and initialize used classes
+        if (selectedHero instanceof Warrior) {
+            originalClass = "Warrior";
+        } else if (selectedHero instanceof Mage) {
+            originalClass = "Mage";
+        } else if (selectedHero instanceof Assassin) {
+            originalClass = "Assassin";
+        }
+        usedClasses.clear();
+        usedClasses.add(originalClass);
         
         // Initialize battle log first
-        battleLog = new JTextArea(8, 50);
+        battleLog = new JTextArea(5, 38);
         battleLog.setFont(new Font("Courier", Font.PLAIN, 12));
         battleLog.setEditable(false);
         battleLog.setBackground(new Color(255, 255, 240));
@@ -474,7 +487,7 @@ public class Main {
         updateBattleInstructions(battleInstructionsArea);
         
         // Code input
-        battleCodeInput = new JTextArea(3, 40);
+        battleCodeInput = new JTextArea(3, 48);
         battleCodeInput.setFont(new Font("Courier", Font.PLAIN, 14));
         battleCodeInput.setBorder(BorderFactory.createCompoundBorder(
             BorderFactory.createLineBorder(Color.BLACK, 2),
@@ -486,14 +499,25 @@ public class Main {
         useAbilityButton.setPreferredSize(new Dimension(200, 40));
         useAbilityButton.addActionListener(e -> validateBattleCode());
         
+        // Next button (initially hidden, shown after victory)
+        nextButton = new JButton("Next →");
+        nextButton.setFont(new Font("Arial", Font.BOLD, 16));
+        nextButton.setPreferredSize(new Dimension(150, 45));
+        nextButton.setVisible(false);
+        nextButton.addActionListener(e -> {
+            selectedHero.addUpgradePoints(3); // Give 3 upgrade points
+            createUpgradeShop();
+            cardLayout.show(mainPanel, "upgradeShop");
+        });
+        
         // Battle log already initialized above, startScriptedBattle() was called there
         
         // Layout
-        JPanel inputPanel = new JPanel(new BorderLayout(10, 10));
-        inputPanel.setOpaque(false);
-        inputPanel.add(new JLabel("Type your code to use special ability:"), BorderLayout.NORTH);
-        inputPanel.add(new JScrollPane(battleCodeInput), BorderLayout.CENTER);
-        inputPanel.add(useAbilityButton, BorderLayout.SOUTH);
+        battleInputPanel = new JPanel(new BorderLayout(10, 10));
+        battleInputPanel.setOpaque(false);
+        battleInputPanel.add(new JLabel("Type your code to use special ability:"), BorderLayout.NORTH);
+        battleInputPanel.add(new JScrollPane(battleCodeInput), BorderLayout.CENTER);
+        battleInputPanel.add(useAbilityButton, BorderLayout.SOUTH);
         
         JPanel centerPanel = new JPanel(new BorderLayout(20, 20));
         centerPanel.setOpaque(false);
@@ -502,16 +526,26 @@ public class Main {
         instructionsScrollPane.setVerticalScrollBarPolicy(ScrollPaneConstants.VERTICAL_SCROLLBAR_AS_NEEDED);
         instructionsScrollPane.setHorizontalScrollBarPolicy(ScrollPaneConstants.HORIZONTAL_SCROLLBAR_NEVER);
         centerPanel.add(instructionsScrollPane, BorderLayout.CENTER);
-        centerPanel.add(inputPanel, BorderLayout.SOUTH);
+        centerPanel.add(battleInputPanel, BorderLayout.SOUTH);
         
         battleFeedbackLabel = new JLabel(" ", JLabel.CENTER);
         battleFeedbackLabel.setFont(new Font("Arial", Font.BOLD, 14));
         
+        // Panel to hold feedback label and next button
+        JPanel feedbackPanel = new JPanel(new BorderLayout(10, 10));
+        feedbackPanel.setOpaque(false);
+        feedbackPanel.add(battleFeedbackLabel, BorderLayout.CENTER);
+        JPanel nextButtonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER));
+        nextButtonPanel.setOpaque(false);
+        nextButtonPanel.add(nextButton);
+        feedbackPanel.add(nextButtonPanel, BorderLayout.SOUTH);
+        
         JPanel rightPanel = new JPanel(new BorderLayout());
         rightPanel.setOpaque(false);
+        rightPanel.setPreferredSize(new Dimension(320, 0)); // Constrain width to make it narrower
         rightPanel.add(new JLabel("Battle Log:", JLabel.CENTER), BorderLayout.NORTH);
         rightPanel.add(new JScrollPane(battleLog), BorderLayout.CENTER);
-        rightPanel.add(battleFeedbackLabel, BorderLayout.SOUTH);
+        rightPanel.add(feedbackPanel, BorderLayout.SOUTH);
         
         JPanel mainBattleLayout = new JPanel(new BorderLayout(20, 20));
         mainBattleLayout.setOpaque(false);
@@ -541,20 +575,57 @@ public class Main {
     private void validateBattleCode() {
         String code = battleCodeInput.getText().trim();
         
-        // Pattern to match class switching: hero = new ClassName();
-        Pattern classSwitchPattern = Pattern.compile(".*hero\\s*=\\s*new\\s+(Warrior|Mage|Assassin)\\s*\\(\\s*\\).*", Pattern.CASE_INSENSITIVE);
-        
-        // Pattern to match special ability: hero.useSpecialAbility()
-        Pattern abilityPattern = Pattern.compile(".*hero\\.useSpecialAbility\\(\\s*\\).*", Pattern.CASE_INSENSITIVE);
-        
-        if (classSwitchPattern.matcher(code).matches() && (battlePhase == 1 || battlePhase == 2)) {
-            // Class switching phase - extract which class
-            if (code.matches(".*new\\s+Warrior.*")) {
+        if (battlePhase == 1) {
+            // Class switching phase - require exact match: hero = new ClassName();
+            String exactWarrior = "hero = new Warrior();";
+            String exactMage = "hero = new Mage();";
+            String exactAssassin = "hero = new Assassin();";
+            
+            if (code.equals(exactWarrior)) {
+                if (usedClasses.contains("Warrior")) {
+                    battleFeedbackLabel.setForeground(Color.RED);
+                    battleFeedbackLabel.setText("❌ Warrior has already been used! Choose a different class.");
+                    return;
+                }
                 switchHeroClass("Warrior");
-            } else if (code.matches(".*new\\s+Mage.*")) {
+                usedClasses.add("Warrior");
+            } else if (code.equals(exactMage)) {
+                if (usedClasses.contains("Mage")) {
+                    battleFeedbackLabel.setForeground(Color.RED);
+                    battleFeedbackLabel.setText("❌ Mage has already been used! Choose a different class.");
+                    return;
+                }
                 switchHeroClass("Mage");
-            } else if (code.matches(".*new\\s+Assassin.*")) {
+                usedClasses.add("Mage");
+            } else if (code.equals(exactAssassin)) {
+                if (usedClasses.contains("Assassin")) {
+                    battleFeedbackLabel.setForeground(Color.RED);
+                    battleFeedbackLabel.setText("❌ Assassin has already been used! Choose a different class.");
+                    return;
+                }
                 switchHeroClass("Assassin");
+                usedClasses.add("Assassin");
+            } else {
+                // Get available classes
+                java.util.List<String> available = new java.util.ArrayList<>();
+                if (!usedClasses.contains("Warrior")) available.add("Warrior");
+                if (!usedClasses.contains("Mage")) available.add("Mage");
+                if (!usedClasses.contains("Assassin")) available.add("Assassin");
+                
+                if (available.isEmpty()) {
+                    battleFeedbackLabel.setForeground(Color.RED);
+                    battleFeedbackLabel.setText("❌ All classes have been used!");
+                } else {
+                    // Show all available classes
+                    StringBuilder availableClasses = new StringBuilder();
+                    for (int i = 0; i < available.size(); i++) {
+                        if (i > 0) availableClasses.append(" or ");
+                        availableClasses.append("hero = new ").append(available.get(i)).append("();");
+                    }
+                    battleFeedbackLabel.setForeground(Color.RED);
+                    battleFeedbackLabel.setText("❌ Invalid code! Use exactly: " + availableClasses.toString());
+                }
+                return;
             }
             
             battleLog.append("🔄 " + selectedHero.getName() + " class switch activated!\n");
@@ -569,7 +640,7 @@ public class Main {
             if (classesUsed < 3) {
                 battlePhase = 2; // Allow ability use, then goblin will attack
                 battleLog.append("💡 You can now use your special ability with the new class!\n");
-                battleLog.append("Type: int damage = hero.useSpecialAbility();\n\n");
+                battleLog.append("Type: damage = hero.useSpecialAbility();\n\n");
                 updateBattleInstructions(findBattleInstructions());
             } else {
                 battlePhase = 3; // Move to redemption phase
@@ -581,7 +652,15 @@ public class Main {
             
             battleCodeInput.setText("");
             
-        } else if (abilityPattern.matcher(code).matches() && battlePhase == 2) {
+        } else if (battlePhase == 2) {
+            // Phase 2: User uses special ability after class switch - require exact match
+            String exactAbility = "damage = hero.useSpecialAbility();";
+            if (!code.equals(exactAbility)) {
+                battleFeedbackLabel.setForeground(Color.RED);
+                battleFeedbackLabel.setText("❌ Invalid code! Use exactly: damage = hero.useSpecialAbility();");
+                return;
+            }
+            
             // User uses special ability after class switch (before goblin attacks)
             int damage = selectedHero.useSpecialAbility();
             String abilityName = getAbilityName(selectedHero);
@@ -604,17 +683,25 @@ public class Main {
             battleLog.append("💀 " + selectedHero.getName() + " takes " + enemyDamage + " damage and is defeated again!\n");
             battleLog.append("⚠️ The hero must switch classes once more!\n\n");
             updateBattleInstructions(findBattleInstructions());
-            // Hide hero image when defeated
+            // Replace hero image with death.png when defeated
             if (heroImageLabel != null) {
-                heroImageLabel.setVisible(false);
+                heroImageLabel.setIcon(loadClassIcon("death.png", "Defeated", new Color(100, 100, 100)));
             }
             
+            battlePhase = 1; // Go back to class switching phase
             battleCodeInput.setText("");
             
-        } else if (abilityPattern.matcher(code).matches()) {
-            if (battlePhase == 0) {
-                // Normal battle phase - user can fight
-                int damage = selectedHero.useSpecialAbility();
+        } else if (battlePhase == 0) {
+            // Phase 0: Normal battle phase - require exact match (without int since variable already exists)
+            String exactAbility = "damage = hero.useSpecialAbility();";
+            if (!code.equals(exactAbility)) {
+                battleFeedbackLabel.setForeground(Color.RED);
+                battleFeedbackLabel.setText("❌ Invalid code! Use exactly: damage = hero.useSpecialAbility();");
+                return;
+            }
+            
+            // Normal battle phase - user can fight
+            int damage = selectedHero.useSpecialAbility();
                 String abilityName = getAbilityName(selectedHero);
                 
                 currentEnemy.takeDamage(damage);
@@ -643,9 +730,9 @@ public class Main {
                         battleLog.append("🔄 Emergency class switch ability activated!\n\n");
                         battlePhase = 1; // Move to scripted sequence
                         updateBattleInstructions(findBattleInstructions());
-                        // Hide hero image when defeated
+                        // Replace hero image with death.png when defeated
                         if (heroImageLabel != null) {
-                            heroImageLabel.setVisible(false);
+                            heroImageLabel.setIcon(loadClassIcon("death.png", "Defeated", new Color(100, 100, 100)));
                         }
                     }
                 }
@@ -661,57 +748,87 @@ public class Main {
                     battleCodeInput.setEditable(false);
                 }
                 
-            } else if (battlePhase == 3) {
-                // Redemption phase - use redemption() but user typed useSpecialAbility()
-                int damage = selectedHero.redemption();
-                String className = selectedHero.getName();
-                
-                // Add redemption narrative
-                battleLog.append("💭 " + className + " whispers: 'This is it... my final stand!'\n");
-                battleLog.append("✨ REDEMPTION activates! The hero channels all remaining power!\n");
-                battleLog.append("⚡ " + className + " unleashes the ultimate attack!\n");
-                
-                currentEnemy.takeDamage(damage);
-                
-                battleLog.append("💥 " + damage + " damage dealt! " + currentEnemy.getName() + " is obliterated!\n\n");
-                battleLog.append("🎉 VICTORY! The " + currentEnemy.getName() + " has been defeated!\n\n");
-                
-                battleLog.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
-                battleLog.append("POLYMORPHISM DEMONSTRATED:\n");
-                battleLog.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
-                battleLog.append("1. Same variable 'hero' held 3 different class types\n");
-                battleLog.append("   (Warrior → Mage → Assassin)\n");
-                battleLog.append("2. Same method call 'hero.useSpecialAbility()'\n");
-                battleLog.append("   produced different behaviors each time\n");
-                battleLog.append("3. In the final phase, it called redemption()\n");
-                battleLog.append("   - Each class has its own redemption() implementation\n");
-                battleLog.append("   - Java automatically called the correct version!\n");
-                battleLog.append("4. Behavior changed at RUNTIME based on actual object type\n");
-                battleLog.append("   This is POLYMORPHISM in action! 🎯\n");
-                
-                battleFeedbackLabel.setForeground(new Color(0, 150, 0));
-                battleFeedbackLabel.setText("🎉 VICTORY! You've mastered POLYMORPHISM!");
-                battleCodeInput.setEditable(false);
-                
-                // Navigate to upgrade shop after a delay
-                Timer timer = new Timer(2000, e -> {
-                    selectedHero.addUpgradePoints(3); // Give 3 upgrade points
-                    createUpgradeShop();
-                    cardLayout.show(mainPanel, "upgradeShop");
-                });
-                timer.setRepeats(false);
-                timer.start();
-            } else {
+        } else if (battlePhase == 3) {
+            // Phase 3: Redemption phase - require exact match
+            String exactAbility = "damage = hero.useSpecialAbility();";
+            if (!code.equals(exactAbility)) {
                 battleFeedbackLabel.setForeground(Color.RED);
-                battleFeedbackLabel.setText("⚠️ You're defeated! Use class switch first: hero = new Mage();");
+                battleFeedbackLabel.setText("❌ Invalid code! Use exactly: damage = hero.useSpecialAbility();");
+                return;
             }
+            
+            // Redemption phase - use redemption() but user typed useSpecialAbility()
+            int damage = selectedHero.redemption();
+            String className = selectedHero.getName();
+            
+            // Add redemption narrative
+            battleLog.append("💭 " + className + " whispers: 'This is it... my final stand!'\n");
+            battleLog.append("✨ REDEMPTION activates! The hero channels all remaining power!\n");
+            battleLog.append("⚡ " + className + " unleashes the ultimate attack!\n");
+            
+            currentEnemy.takeDamage(damage);
+            
+            battleLog.append("💥 " + damage + " damage dealt! " + currentEnemy.getName() + " is obliterated!\n\n");
+            battleLog.append("🎉 VICTORY! The " + currentEnemy.getName() + " has been defeated!\n\n");
+            
+            battleLog.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
+            battleLog.append("POLYMORPHISM DEMONSTRATED:\n");
+            battleLog.append("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n");
+            battleLog.append("1. Same variable 'hero' held 3 different class types\n");
+            battleLog.append("   (Warrior → Mage → Assassin)\n");
+            battleLog.append("2. Same method call 'hero.useSpecialAbility()'\n");
+            battleLog.append("   produced different behaviors each time\n");
+            battleLog.append("3. In the final phase, it called redemption()\n");
+            battleLog.append("   - Each class has its own redemption() implementation\n");
+            battleLog.append("   - Java automatically called the correct version!\n");
+            battleLog.append("4. Behavior changed at RUNTIME based on actual object type\n");
+            battleLog.append("   This is POLYMORPHISM in action! 🎯\n");
+            
+            battleFeedbackLabel.setForeground(new Color(0, 150, 0));
+            battleFeedbackLabel.setText("🎉 VICTORY! You've mastered POLYMORPHISM!");
+            battleCodeInput.setEditable(false);
+            
+            // Hide input panel and show next button
+            if (battleInputPanel != null) {
+                battleInputPanel.setVisible(false);
+            }
+            if (nextButton != null) {
+                nextButton.setVisible(true);
+            }
+            
             battleCodeInput.setText("");
         } else {
+            // Invalid code for current phase
             battleFeedbackLabel.setForeground(Color.RED);
-            if (battlePhase == 1 || battlePhase == 2) {
-                battleFeedbackLabel.setText("❌ Invalid code! Try: hero = new Mage(); (or Warrior/Assassin)");
-            } else {
-                battleFeedbackLabel.setText("❌ Invalid code! Try: int damage = hero.useSpecialAbility();");
+            if (battlePhase == 1) {
+                // Get available classes
+                java.util.List<String> available = new java.util.ArrayList<>();
+                if (!usedClasses.contains("Warrior")) available.add("Warrior");
+                if (!usedClasses.contains("Mage")) available.add("Mage");
+                if (!usedClasses.contains("Assassin")) available.add("Assassin");
+                
+                if (available.isEmpty()) {
+                    battleFeedbackLabel.setForeground(Color.RED);
+                    battleFeedbackLabel.setText("❌ All classes have been used!");
+                } else {
+                    // Show all available classes
+                    StringBuilder availableClasses = new StringBuilder();
+                    for (int i = 0; i < available.size(); i++) {
+                        if (i > 0) availableClasses.append(" or ");
+                        availableClasses.append("hero = new ").append(available.get(i)).append("();");
+                    }
+                    battleFeedbackLabel.setForeground(Color.RED);
+                    battleFeedbackLabel.setText("❌ Invalid code! Use exactly: " + availableClasses.toString());
+                }
+            } else if (battlePhase == 2) {
+                battleFeedbackLabel.setForeground(Color.RED);
+                battleFeedbackLabel.setText("❌ Invalid code! Use exactly: damage = hero.useSpecialAbility();");
+            } else if (battlePhase == 0) {
+                battleFeedbackLabel.setForeground(Color.RED);
+                battleFeedbackLabel.setText("❌ Invalid code! Use exactly: damage = hero.useSpecialAbility();");
+            } else if (battlePhase == 3) {
+                battleFeedbackLabel.setForeground(Color.RED);
+                battleFeedbackLabel.setText("❌ Invalid code! Use exactly: damage = hero.useSpecialAbility();");
             }
         }
     }
@@ -762,15 +879,24 @@ public class Main {
                                "- Mage: Fireball (3x damage)\n" +
                                "- Assassin: Backstab (2.5x damage)\n\n" +
                                "This is POLYMORPHISM - same method call, different behaviors!\n\n" +
-                               "Type: int damage = hero.useSpecialAbility();");
+                               "Type: damage = hero.useSpecialAbility();");
         } else if (battlePhase == 1) {
+            // Get available classes (not yet used)
+            java.util.List<String> available = new java.util.ArrayList<>();
+            if (!usedClasses.contains("Warrior")) available.add("Warrior");
+            if (!usedClasses.contains("Mage")) available.add("Mage");
+            if (!usedClasses.contains("Assassin")) available.add("Assassin");
+            
+            StringBuilder classOptions = new StringBuilder();
+            for (String className : available) {
+                classOptions.append("To switch to ").append(className).append(": hero = new ").append(className).append("();\n");
+            }
+            
             instructions.setText("INSTRUCTIONS - POLYMORPHISM IN ACTION:\n\n" +
                                "Phase 2: The Goblin has defeated you!\n\n" +
                                "💡 Emergency Plan: Use class switch!\n" +
                                "Type your code to switch classes:\n\n" +
-                               "To switch to Warrior:  hero = new Warrior();\n" +
-                               "To switch to Mage:     hero = new Mage();\n" +
-                               "To switch to Assassin: hero = new Assassin();\n\n" +
+                               classOptions.toString() + "\n" +
                                "This demonstrates POLYMORPHISM:\n" +
                                "- Same variable 'hero' can hold different class types\n" +
                                "- The variable type (Hero) stays the same\n" +
@@ -779,7 +905,7 @@ public class Main {
             instructions.setText("INSTRUCTIONS - POLYMORPHISM IN ACTION:\n\n" +
                                "Phase 2: You've switched classes!\n\n" +
                                "💡 First, use your special ability with the new class:\n" +
-                               "Type: int damage = hero.useSpecialAbility();\n\n" +
+                               "Type: damage = hero.useSpecialAbility();\n\n" +
                                "After using your ability, the goblin will attack.\n" +
                                "Then you'll need to switch to another class.\n\n" +
                                "Notice: Same method call 'hero.useSpecialAbility()'\n" +
@@ -789,7 +915,7 @@ public class Main {
             instructions.setText("INSTRUCTIONS - FINAL PHASE - REDEMPTION:\n\n" +
                                "Phase 3: This is your last chance!\n\n" +
                                "💡 Use your special ability:\n\n" +
-                               "Type: int damage = hero.useSpecialAbility();\n\n" +
+                               "Type: damage = hero.useSpecialAbility();\n\n" +
                                "💭 The hero's REDEMPTION ability will activate!\n" +
                                "Even though you type 'useSpecialAbility()',\n" +
                                "it will call the 'redemption()' method internally.\n\n" +
@@ -813,9 +939,14 @@ public class Main {
     private void updateBattleDisplay() {
         // Update hero battlefield portrait when class changes
         if (heroImageLabel != null) {
-            heroImageLabel.setIcon(getHeroBattleIcon());
-            // Show hero image if hero is alive, hide if defeated
-            heroImageLabel.setVisible(!selectedHero.isDefeated());
+            if (selectedHero.isDefeated()) {
+                // Show death.png when defeated
+                heroImageLabel.setIcon(loadClassIcon("death.png", "Defeated", new Color(100, 100, 100)));
+            } else {
+                // Show normal hero icon when alive
+                heroImageLabel.setIcon(getHeroBattleIcon());
+            }
+            heroImageLabel.setVisible(true);
         }
         // Update hero name label when class changes
         if (heroNameLabel != null) {

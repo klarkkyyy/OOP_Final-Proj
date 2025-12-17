@@ -9,7 +9,7 @@ public abstract class Hero {
     private String description;
     private int upgradePoints; // Private field - demonstrates ENCAPSULATION
     
-    // Constructor
+    // Constructor (Initialize hero attributes)
     public Hero(String name, int health, int attack, int mana, String description) {
         this.name = name;
         this.maxHealth = health;
@@ -17,7 +17,7 @@ public abstract class Hero {
         this.attack = attack;
         this.mana = mana;
         this.description = description;
-        this.upgradePoints = 0; // Initialize upgrade points
+        this.upgradePoints = 0; 
     }
     
     // Getters - Demonstrates ENCAPSULATION (Pillar 2 of OOP)
