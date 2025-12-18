@@ -1,4 +1,5 @@
 import javax.imageio.ImageIO;
+import javax.sound.sampled.*;
 import javax.swing.*;
 import java.awt.*;
 import java.awt.image.BufferedImage;
@@ -33,6 +34,9 @@ public class Main {
     }
     
     private void createWelcomeScreen() {
+        // Play OST background music
+        playBackgroundMusic("ost.wav", true);
+        
         JPanel welcomePanel = new JPanel(new BorderLayout());
         welcomePanel.setBorder(BorderFactory.createEmptyBorder(40, 40, 40, 40));
         welcomePanel.setBackground(new Color(240, 248, 255));
@@ -72,6 +76,9 @@ public class Main {
     }
     
     private void createClassSelectionScreen() {
+        // Play OST background music (continues from welcome screen)
+        playBackgroundMusic("ost.wav", true);
+        
         JPanel selectionPanel = new JPanel(new BorderLayout());
         selectionPanel.setBorder(BorderFactory.createEmptyBorder(30, 30, 30, 30));
         selectionPanel.setBackground(new Color(255, 250, 240));
@@ -336,11 +343,21 @@ public class Main {
         heroImageLabel.setHorizontalAlignment(JLabel.CENTER);
         heroNameLabel = new JLabel(selectedHero.getName(), JLabel.CENTER);
         heroNameLabel.setFont(new Font("Arial", Font.BOLD, 16));
+        
+        heroHPLabel = new JLabel("HP: " + selectedHero.getHealth(), JLabel.CENTER);
+        heroHPLabel.setFont(new Font("Arial", Font.BOLD, 14));
+        heroHPLabel.setForeground(new Color(0, 150, 0));
+
+        JPanel heroInfoPanel = new JPanel();
+        heroInfoPanel.setLayout(new BoxLayout(heroInfoPanel, BoxLayout.Y_AXIS));
+        heroInfoPanel.setOpaque(false);
+        heroInfoPanel.add(heroNameLabel);
+        heroInfoPanel.add(heroHPLabel);
 
         JPanel heroPanel = new JPanel(new BorderLayout());
         heroPanel.setOpaque(false);
         heroPanel.add(heroImageLabel, BorderLayout.CENTER);
-        heroPanel.add(heroNameLabel, BorderLayout.SOUTH);
+        heroPanel.add(heroInfoPanel, BorderLayout.SOUTH);
 
         // VS label
         JLabel vsLabel = new JLabel("VS", JLabel.CENTER);
@@ -352,11 +369,21 @@ public class Main {
         enemyImageLabel.setHorizontalAlignment(JLabel.CENTER);
         JLabel enemyNameLabel = new JLabel(currentEnemy.getName(), JLabel.CENTER);
         enemyNameLabel.setFont(new Font("Arial", Font.BOLD, 16));
+        
+        enemyHPLabel = new JLabel("HP: " + currentEnemy.getHealth(), JLabel.CENTER);
+        enemyHPLabel.setFont(new Font("Arial", Font.BOLD, 14));
+        enemyHPLabel.setForeground(new Color(200, 0, 0));
+
+        JPanel enemyInfoPanel = new JPanel();
+        enemyInfoPanel.setLayout(new BoxLayout(enemyInfoPanel, BoxLayout.Y_AXIS));
+        enemyInfoPanel.setOpaque(false);
+        enemyInfoPanel.add(enemyNameLabel);
+        enemyInfoPanel.add(enemyHPLabel);
 
         JPanel enemyPanel = new JPanel(new BorderLayout());
         enemyPanel.setOpaque(false);
         enemyPanel.add(enemyImageLabel, BorderLayout.CENTER);
-        enemyPanel.add(enemyNameLabel, BorderLayout.SOUTH);
+        enemyPanel.add(enemyInfoPanel, BorderLayout.SOUTH);
 
         row.add(heroPanel);
         row.add(vsLabel);
@@ -386,14 +413,18 @@ public class Main {
         
         if (warriorPattern.matcher(code).matches()) {
             selectedHero = new Warrior();
+            playSoundEffect("success.wav");
             showSuccess("Warrior selected!");
         } else if (magePattern.matcher(code).matches()) {
             selectedHero = new Mage();
+            playSoundEffect("success.wav");
             showSuccess("Mage selected!");
         } else if (assassinPattern.matcher(code).matches()) {
             selectedHero = new Assassin();
+            playSoundEffect("success.wav");
             showSuccess("Assassin selected!");
         } else {
+            playSoundEffect("fail.wav");
             feedbackLabel.setForeground(Color.RED);
             feedbackLabel.setText("Invalid code! Make sure you're creating an object with 'new ClassName()'");
         }
@@ -425,9 +456,12 @@ public class Main {
     private JTextArea battleInstructionsArea;
     private JLabel heroImageLabel;
     private JLabel heroNameLabel;
+    private JLabel heroHPLabel;
     private JLabel enemyImageLabel;
+    private JLabel enemyHPLabel;
     private JButton nextButton; // Button to proceed to upgrade shop after victory
     private JPanel battleInputPanel; // Input panel to hide/show after victory
+    private Clip currentBackgroundMusic; // Track current background music to stop it when switching screens
     private int battlePhase = 0; // 0=initial, 1=after first one-shot, 2=after class switch (can use ability), 3=redemption phase
     private int classesUsed = 1; // Track how many classes have been used
     private String originalClass; // Track the original class selected
@@ -450,7 +484,7 @@ public class Main {
         titleLabel.setForeground(new Color(139, 0, 0));
         
         // Create enemy (one-shot attack)
-        currentEnemy = new Enemy("Dark Goblin", 120, 999);
+        currentEnemy = new Enemy("Goblin", 150, 999);
         
         // Reset battle phase
         battlePhase = 0;
@@ -465,6 +499,9 @@ public class Main {
         }
         usedClasses.clear();
         usedClasses.add(originalClass);
+        
+        // Play battle background music
+        playBackgroundMusic("battle.wav", true);
         
         // Initialize battle log first
         battleLog = new JTextArea(5, 38);
@@ -505,6 +542,7 @@ public class Main {
         nextButton.setPreferredSize(new Dimension(150, 45));
         nextButton.setVisible(false);
         nextButton.addActionListener(e -> {
+            stopBackgroundMusic(); // Stop victory music before going to upgrade shop
             selectedHero.addUpgradePoints(3); // Give 3 upgrade points
             createUpgradeShop();
             cardLayout.show(mainPanel, "upgradeShop");
@@ -663,9 +701,12 @@ public class Main {
             
             // User uses special ability after class switch (before goblin attacks)
             int damage = selectedHero.useSpecialAbility();
+            playAttackSound(selectedHero);
             String abilityName = getAbilityName(selectedHero);
             
             currentEnemy.takeDamage(damage);
+            playSoundEffect("goblin.wav");
+            updateEnemyHP();
             
             String message = String.format("%s uses %s and deals %d damage to %s!",
                                           selectedHero.getName(), abilityName, damage, currentEnemy.getName());
@@ -679,6 +720,7 @@ public class Main {
             // Now goblin attacks and one-shots
             int enemyDamage = currentEnemy.attack();
             selectedHero.takeDamage(enemyDamage);
+            updateHeroHP();
             battleLog.append("💥 " + currentEnemy.getName() + " unleashes another devastating attack!\n");
             battleLog.append("💀 " + selectedHero.getName() + " takes " + enemyDamage + " damage and is defeated again!\n");
             battleLog.append("⚠️ The hero must switch classes once more!\n\n");
@@ -702,9 +744,12 @@ public class Main {
             
             // Normal battle phase - user can fight
             int damage = selectedHero.useSpecialAbility();
+            playAttackSound(selectedHero);
                 String abilityName = getAbilityName(selectedHero);
                 
                 currentEnemy.takeDamage(damage);
+                playSoundEffect("goblin.wav");
+                updateEnemyHP();
                 
                 String message = String.format("%s uses %s and deals %d damage to %s!",
                                               selectedHero.getName(), abilityName, damage, currentEnemy.getName());
@@ -719,6 +764,7 @@ public class Main {
                 if (!currentEnemy.isDefeated()) {
                     int enemyDamage = currentEnemy.attack();
                     selectedHero.takeDamage(enemyDamage);
+                    updateHeroHP();
                     battleLog.append(currentEnemy.getName() + " attacks for " + enemyDamage + " damage!\n");
                     battleLog.append(selectedHero.getName() + " health: " + selectedHero.getHealth() + "\n\n");
                     
@@ -759,6 +805,7 @@ public class Main {
             
             // Redemption phase - use redemption() but user typed useSpecialAbility()
             int damage = selectedHero.redemption();
+            playAttackSound(selectedHero);
             String className = selectedHero.getName();
             
             // Add redemption narrative
@@ -767,6 +814,8 @@ public class Main {
             battleLog.append("⚡ " + className + " unleashes the ultimate attack!\n");
             
             currentEnemy.takeDamage(damage);
+            playSoundEffect("goblin.wav");
+            updateEnemyHP();
             
             battleLog.append("💥 " + damage + " damage dealt! " + currentEnemy.getName() + " is obliterated!\n\n");
             battleLog.append("🎉 VICTORY! The " + currentEnemy.getName() + " has been defeated!\n\n");
@@ -787,6 +836,10 @@ public class Main {
             battleFeedbackLabel.setForeground(new Color(0, 150, 0));
             battleFeedbackLabel.setText("🎉 VICTORY! You've mastered POLYMORPHISM!");
             battleCodeInput.setEditable(false);
+            
+            // Stop battle music and play victory music (loops until next button is clicked)
+            stopBackgroundMusic();
+            playBackgroundMusic("victory.wav", true);
             
             // Hide input panel and show next button
             if (battleInputPanel != null) {
@@ -850,6 +903,136 @@ public class Main {
             return "Backstab";
         }
         return "Special Ability";
+    }
+    
+    private void stopBackgroundMusic() {
+        if (currentBackgroundMusic != null && currentBackgroundMusic.isRunning()) {
+            currentBackgroundMusic.stop();
+            currentBackgroundMusic.close();
+            currentBackgroundMusic = null;
+        }
+    }
+    
+    private void playBackgroundMusic(String soundFile, boolean loop) {
+        stopBackgroundMusic(); // Stop any existing background music
+        
+        new Thread(() -> {
+            try {
+                File audioFile = new File(soundFile);
+                if (!audioFile.exists()) {
+                    InputStream audioStream = getClass().getResourceAsStream("/" + soundFile);
+                    if (audioStream == null) {
+                        return;
+                    }
+                    AudioInputStream audioInputStream = AudioSystem.getAudioInputStream(audioStream);
+                    currentBackgroundMusic = AudioSystem.getClip();
+                    currentBackgroundMusic.open(audioInputStream);
+                    if (loop) {
+                        currentBackgroundMusic.loop(Clip.LOOP_CONTINUOUSLY);
+                    } else {
+                        currentBackgroundMusic.start();
+                    }
+                } else {
+                    AudioInputStream audioInputStream = AudioSystem.getAudioInputStream(audioFile);
+                    currentBackgroundMusic = AudioSystem.getClip();
+                    currentBackgroundMusic.open(audioInputStream);
+                    if (loop) {
+                        currentBackgroundMusic.loop(Clip.LOOP_CONTINUOUSLY);
+                    } else {
+                        currentBackgroundMusic.start();
+                    }
+                }
+            } catch (Exception e) {
+                System.err.println("Error playing background music " + soundFile + ": " + e.getMessage());
+            }
+        }).start();
+    }
+    
+    private void playSoundEffect(String soundFile) {
+        new Thread(() -> {
+            try {
+                File audioFile = new File(soundFile);
+                if (!audioFile.exists()) {
+                    InputStream audioStream = getClass().getResourceAsStream("/" + soundFile);
+                    if (audioStream == null) {
+                        return;
+                    }
+                    AudioInputStream audioInputStream = AudioSystem.getAudioInputStream(audioStream);
+                    Clip clip = AudioSystem.getClip();
+                    clip.open(audioInputStream);
+                    clip.start();
+                    clip.addLineListener(event -> {
+                        if (event.getType() == LineEvent.Type.STOP) {
+                            clip.close();
+                        }
+                    });
+                } else {
+                    AudioInputStream audioInputStream = AudioSystem.getAudioInputStream(audioFile);
+                    Clip clip = AudioSystem.getClip();
+                    clip.open(audioInputStream);
+                    clip.start();
+                    clip.addLineListener(event -> {
+                        if (event.getType() == LineEvent.Type.STOP) {
+                            clip.close();
+                        }
+                    });
+                }
+            } catch (Exception e) {
+                System.err.println("Error playing sound effect " + soundFile + ": " + e.getMessage());
+            }
+        }).start();
+    }
+    
+    private void playAttackSound(Hero hero) {
+        final String soundFile;
+        if (hero instanceof Warrior) {
+            soundFile = "sword_clash.wav";
+        } else if (hero instanceof Mage) {
+            soundFile = "fireball.wav";
+        } else if (hero instanceof Assassin) {
+            soundFile = "dagger_attack.wav";
+        } else {
+            return; // No sound for unknown class
+        }
+        
+        // Play sound in a separate thread to avoid blocking
+        new Thread(() -> {
+            try {
+                File audioFile = new File(soundFile);
+                if (!audioFile.exists()) {
+                    // Try classpath as fallback
+                    InputStream audioStream = getClass().getResourceAsStream("/" + soundFile);
+                    if (audioStream == null) {
+                        return; // File not found
+                    }
+                    AudioInputStream audioInputStream = AudioSystem.getAudioInputStream(audioStream);
+                    Clip clip = AudioSystem.getClip();
+                    clip.open(audioInputStream);
+                    clip.start();
+                    // Keep reference to prevent garbage collection
+                    clip.addLineListener(event -> {
+                        if (event.getType() == LineEvent.Type.STOP) {
+                            clip.close();
+                        }
+                    });
+                } else {
+                    // Load from file system
+                    AudioInputStream audioInputStream = AudioSystem.getAudioInputStream(audioFile);
+                    Clip clip = AudioSystem.getClip();
+                    clip.open(audioInputStream);
+                    clip.start();
+                    // Keep reference to prevent garbage collection
+                    clip.addLineListener(event -> {
+                        if (event.getType() == LineEvent.Type.STOP) {
+                            clip.close();
+                        }
+                    });
+                }
+            } catch (Exception e) {
+                // Print error for debugging (can be removed later)
+                System.err.println("Error playing sound " + soundFile + ": " + e.getMessage());
+            }
+        }).start();
     }
     
     private void switchHeroClass(String newClass) {
@@ -952,9 +1135,28 @@ public class Main {
         if (heroNameLabel != null) {
             heroNameLabel.setText(selectedHero.getName());
         }
+        // Update hero HP when class changes
+        updateHeroHP();
+    }
+    
+    private void updateEnemyHP() {
+        // Update enemy HP label
+        if (enemyHPLabel != null && currentEnemy != null) {
+            enemyHPLabel.setText("HP: " + currentEnemy.getHealth());
+        }
+    }
+    
+    private void updateHeroHP() {
+        // Update hero HP label
+        if (heroHPLabel != null && selectedHero != null) {
+            heroHPLabel.setText("HP: " + selectedHero.getHealth());
+        }
     }
     
     private void createUpgradeShop() {
+        // Play upgrade shop background music
+        playBackgroundMusic("upgrade.wav", true);
+        
         // Remove upgrade shop if it already exists
         Component[] components = mainPanel.getComponents();
         for (int i = components.length - 1; i >= 0; i--) {
@@ -1093,27 +1295,34 @@ public class Main {
             boolean result = selectedHero.upgradeAttack();
             if (result) {
                 success = true;
+                playSoundEffect("upSfx.wav");
                 message = "✅ Attack upgraded! +5 Attack";
             } else {
+                playSoundEffect("fail.wav");
                 message = "❌ Upgrade failed! Check if you have upgrade points or if attack is at max (100)";
             }
         } else if (upgradeHealthPattern.matcher(code).matches()) {
             boolean result = selectedHero.upgradeHealth();
             if (result) {
                 success = true;
+                playSoundEffect("upSfx.wav");
                 message = "✅ Health upgraded! +20 Health";
             } else {
+                playSoundEffect("fail.wav");
                 message = "❌ Upgrade failed! Check if you have upgrade points or if health is at max (300)";
             }
         } else if (upgradeManaPattern.matcher(code).matches()) {
             boolean result = selectedHero.upgradeMana();
             if (result) {
                 success = true;
+                playSoundEffect("upSfx.wav");
                 message = "✅ Mana upgraded! +10 Mana";
             } else {
+                playSoundEffect("fail.wav");
                 message = "❌ Upgrade failed! Check if you have upgrade points or if mana is at max (100)";
             }
         } else {
+            playSoundEffect("fail.wav");
             message = "❌ Invalid code! Try: hero.upgradeAttack(); or hero.upgradeHealth(); or hero.upgradeMana();";
         }
         
@@ -1143,6 +1352,10 @@ public class Main {
     }
     
     private void showCompletionScreen() {
+        // Stop any background music and play congrats music (loops until game closes)
+        stopBackgroundMusic();
+        playBackgroundMusic("congrats.wav", true);
+        
         // Remove completion screen if it already exists
         Component[] components = mainPanel.getComponents();
         for (int i = components.length - 1; i >= 0; i--) {

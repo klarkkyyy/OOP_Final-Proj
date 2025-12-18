@@ -85,13 +85,13 @@ public abstract class Hero {
             upgradePoints--;
             return true;
         }
-        return false; // Upgrade failed - validation hidden from user
+        return false;
     }
     
     public boolean upgradeHealth() {
         if (upgradePoints > 0 && maxHealth < 300) {
             maxHealth += 20;
-            currentHealth += 20; // Also heal when upgrading health
+            currentHealth += 20;
             upgradePoints--;
             return true;
         }
