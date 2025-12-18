@@ -59,6 +59,30 @@ public class Main {
         welcomeText.setLineWrap(true);
         welcomeText.setWrapStyleWord(true);
 
+        // Load and add lock_in.gif
+        ImageIcon lockInGif = null;
+        try {
+            // Try to load from classpath first
+            java.net.URL gifUrl = getClass().getResource("/lock_in.gif");
+            if (gifUrl == null) {
+                // Try working directory
+                File gifFile = new File("lock_in.gif");
+                if (gifFile.exists()) {
+                    lockInGif = new ImageIcon(gifFile.getAbsolutePath());
+                }
+            } else {
+                lockInGif = new ImageIcon(gifUrl);
+            }
+        } catch (Exception e) {
+            System.err.println("Error loading lock_in.gif: " + e.getMessage());
+        }
+        
+        JLabel gifLabel = null;
+        if (lockInGif != null) {
+            gifLabel = new JLabel(lockInGif);
+            gifLabel.setHorizontalAlignment(JLabel.CENTER);
+        }
+        
         JButton nextButton = new JButton("Next →");
         nextButton.setFont(new Font("Arial", Font.BOLD, 14));
         nextButton.setPreferredSize(new Dimension(120, 40));
@@ -67,9 +91,17 @@ public class Main {
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
         buttonPanel.setOpaque(false);
         buttonPanel.add(nextButton);
+        
+        // Create a panel to hold text and GIF vertically
+        JPanel centerContentPanel = new JPanel(new BorderLayout(10, 10));
+        centerContentPanel.setOpaque(false);
+        centerContentPanel.add(new JScrollPane(welcomeText), BorderLayout.CENTER);
+        if (gifLabel != null) {
+            centerContentPanel.add(gifLabel, BorderLayout.SOUTH);
+        }
 
         welcomePanel.add(titleLabel, BorderLayout.NORTH);
-        welcomePanel.add(new JScrollPane(welcomeText), BorderLayout.CENTER);
+        welcomePanel.add(centerContentPanel, BorderLayout.CENTER);
         welcomePanel.add(buttonPanel, BorderLayout.SOUTH);
 
         mainPanel.add(welcomePanel, "welcome");
